@@ -41,6 +41,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <autoware_parking_srvs/srv/freespace_plan.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/buffer.h>
@@ -95,6 +96,7 @@ private:
   rclcpp::Subscription<OccupancyGrid>::SharedPtr occupancy_grid_sub_;
   rclcpp::Subscription<Scenario>::SharedPtr scenario_sub_;
   rclcpp::Subscription<Odometry>::SharedPtr odom_sub_;
+  rclcpp::Service<autoware_parking_srvs::srv::FreespacePlan>::SharedPtr freespace_plan_srv_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 
@@ -134,6 +136,10 @@ private:
   void onOccupancyGrid(const OccupancyGrid::ConstSharedPtr msg);
   void onScenario(const Scenario::ConstSharedPtr msg);
   void onOdometry(const Odometry::ConstSharedPtr msg);
+  bool onFreespacePlan(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<autoware_parking_srvs::srv::FreespacePlan::Request> request,
+    std::shared_ptr<autoware_parking_srvs::srv::FreespacePlan::Response> response);
 
   void onTimer();
 
