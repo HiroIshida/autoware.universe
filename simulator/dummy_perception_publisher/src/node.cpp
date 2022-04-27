@@ -53,6 +53,7 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
 
 void DummyPerceptionPublisherNode::timerCallback()
 {
+  const rclcpp::Time now = rclcpp::Clock(RCL_ROS_TIME).now();
   // output msgs
   tier4_perception_msgs::msg::DetectedObjectsWithFeature output_dynamic_object_msg;
   geometry_msgs::msg::PoseStamped output_moved_object_pose;
@@ -180,7 +181,7 @@ void DummyPerceptionPublisherNode::timerCallback()
       new pcl::PointCloud<pcl::PointXYZ>);
     pcl::VoxelGridOcclusionEstimation<pcl::PointXYZ> ray_tracing_filter;
     ray_tracing_filter.setInputCloud(merged_pointcloud_ptr);
-    ray_tracing_filter.setLeafSize(0.25, 0.25, 0.25);
+    ray_tracing_filter.setLeafSize(0.02, 0.02, 0.02);
     ray_tracing_filter.initializeVoxelGrid();
     for (size_t i = 0; i < v_pointcloud.size(); ++i) {
       pcl::PointCloud<pcl::PointXYZ>::Ptr ray_traced_pointcloud_ptr(
@@ -221,6 +222,9 @@ void DummyPerceptionPublisherNode::timerCallback()
   if (use_object_recognition_) {
     detected_object_with_feature_pub_->publish(output_dynamic_object_msg);
   }
+  const rclcpp::Time now2 = rclcpp::Clock(RCL_ROS_TIME).now();
+  const auto t = (now2 - now);
+  RCLCPP_INFO_STREAM(rclcpp::get_logger("ishida_debug"), "elapsed in cb: " << t.seconds());
 }
 
 void DummyPerceptionPublisherNode::createObjectPointcloud(
