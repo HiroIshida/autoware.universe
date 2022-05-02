@@ -14,6 +14,8 @@
 
 #include "route_handler/route_handler.hpp"
 
+#include "lanelet2_core/Forward.h"
+
 #include <lanelet2_extension/utility/message_conversion.hpp>
 #include <lanelet2_extension/utility/query.hpp>
 #include <lanelet2_extension/utility/utilities.hpp>
@@ -171,11 +173,28 @@ namespace route_handler
 {
 RouteHandler::RouteHandler(const HADMapBin & map_msg) { setMap(map_msg); }
 
+RouteHandler::RouteHandler(
+  lanelet::LaneletMapPtr lanelet_map_ptr, lanelet::traffic_rules::TrafficRulesPtr traffic_rules_ptr,
+  lanelet::routing::RoutingGraphPtr routing_graph_ptr)
+{
+  setMapInfo(lanelet_map_ptr, traffic_rules_ptr, routing_graph_ptr);
+}
+
 void RouteHandler::setMap(const HADMapBin & map_msg)
 {
   lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
   lanelet::utils::conversion::fromBinMsg(
     map_msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
+  setMapInfo(lanelet_map_ptr_, traffic_rules_ptr_, routing_graph_ptr_);
+}
+
+void RouteHandler::setMapInfo(
+  lanelet::LaneletMapPtr lanelet_map_ptr, lanelet::traffic_rules::TrafficRulesPtr traffic_rules_ptr,
+  lanelet::routing::RoutingGraphPtr routing_graph_ptr)
+{
+  lanelet_map_ptr_ = lanelet_map_ptr;
+  traffic_rules_ptr_ = traffic_rules_ptr;
+  routing_graph_ptr_ = routing_graph_ptr;
 
   const auto traffic_rules = lanelet::traffic_rules::TrafficRulesFactory::create(
     lanelet::Locations::Germany, lanelet::Participants::Vehicle);
@@ -210,6 +229,40 @@ void RouteHandler::setRoute(const HADMapRoute & route_msg)
       logger_,
       "Loop detected within route! Currently, no loop is allowed for route! Using previous route");
   }
+}
+
+RouteHandler RouteHandler::get_sub_route_handler(const lanelet::ConstPolygon3d & focus_region) const
+{
+  const auto containLanelet =
+    [](const lanelet::ConstPolygon3d & polygon, const lanelet::ConstLanelet & llt) -> bool {
+    // if one of the vertexes of the lanlet is contained by the polygon
+    // this function returns true
+    const lanelet::CompoundPolygon3d llt_poly = llt.polygon3d();
+    for (const auto & pt : llt_poly) {
+      if (lanelet::geometry::within(pt, polygon.basicPolygon())) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
+
+  lanelet::Lanelets llts_inside;
+  for (const lanelet::ConstLanelet & llt : all_lanelets) {
+    if (containLanelet(focus_region, llt)) {
+      lanelet::Lanelet llt_ = lanelet_map_ptr_->laneletLayer.get(llt.id());
+      llts_inside.push_back(llt_);
+    }
+  }
+  lanelet::LaneletMapUPtr sub_map_uptr = lanelet::utils::createSubmap(llts_inside)->laneletMap();
+  lanelet::LaneletMapPtr sub_map_ptr = std::move(sub_map_uptr);
+
+  lanelet::routing::RoutingGraphUPtr sub_graph_uptr =
+    lanelet::routing::RoutingGraph::build(*sub_map_ptr, *traffic_rules_ptr_);
+  lanelet::routing::RoutingGraphPtr sub_graph_ptr = std::move(sub_graph_uptr);
+
+  return RouteHandler(sub_map_ptr, traffic_rules_ptr_, sub_graph_ptr);
 }
 
 bool RouteHandler::isHandlerReady() const { return is_handler_ready_; }
