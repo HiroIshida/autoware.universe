@@ -157,10 +157,10 @@ bool test_astar(
 
   rclcpp::Clock clock{RCL_SYSTEM_TIME};
   const rclcpp::Time begin = clock.now();
-  bool success = astar.makePlan(create_pose_msg(start), create_pose_msg(goal));
+  bool is_success = astar.makePlan(create_pose_msg(start), create_pose_msg(goal));
   const rclcpp::Time now = clock.now();
   const double msec = (now - begin).seconds() * 1000.0;
-  if (success) {
+  if (is_success) {
     std::cout << "plan success : " << msec << "[msec]" << std::endl;
   } else {
     std::cout << "plan fail : " << msec << "[msec]" << std::endl;
@@ -198,8 +198,18 @@ bool test_astar(
   add_message_to_rosbag(writer, result_trajectory, "trajectory", "geometry_msgs/msg/PoseArray");
   add_message_to_rosbag(writer, create_float_msg(msec), "elapsed_time", "std_msgs/msg/Float64");
 
+  geometry_msgs::msg::PoseArray trajectory;
+  for (const auto & pose : result.waypoints) {
+    trajectory.poses.push_back(pose.pose.pose);
+  }
+
+  if (astar.hasObstacleOnTrajectory(trajectory)) {
+    std::cout << "not feasible trajectory" << std::endl;
+    return false;
+  }
+
   // backtrace the path and confirm that the entire path is collision-free
-  return success && astar.hasFeasibleSolution();
+  return is_success;
 }
 
 TEST(AstarSearchTestSuite, SingleCurvature)

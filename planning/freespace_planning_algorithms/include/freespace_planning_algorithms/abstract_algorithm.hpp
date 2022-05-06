@@ -137,7 +137,6 @@ public:
   virtual void setMap(const nav_msgs::msg::OccupancyGrid & costmap);
   virtual bool makePlan(
     const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose) = 0;
-  virtual bool hasFeasibleSolution() = 0;  // currently used only in testing
   virtual bool hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const;
   double getSolutionCost() const { return solution_cost_; }
   const PlannerWaypoints & getWaypoints() const { return waypoints_; }
