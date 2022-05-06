@@ -134,7 +134,6 @@ bool test_astar(
 
   fpa::PlannerCommonParam planner_common_param{
     time_limit,
-    shape,
     minimum_turning_radius,
     maximum_turning_radius,
     turning_radius_size,
@@ -151,7 +150,7 @@ bool test_astar(
   double distance_heuristic_weight = 1.0;
   fpa::AstarParam astar_param{only_behind_solutions, use_back, distance_heuristic_weight};
 
-  auto astar = fpa::AstarSearch(planner_common_param, astar_param);
+  auto astar = fpa::AstarSearch(planner_common_param, shape, astar_param);
 
   auto costmap_msg = construct_cost_map(150, 150, 0.2, 10);
   astar.setMap(costmap_msg);
