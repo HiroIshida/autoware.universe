@@ -97,7 +97,6 @@ struct PlannerCommonParam
   double time_limit;  // planning time limit [msec]
 
   // robot configs
-  VehicleShape vehicle_shape;
   double minimum_turning_radius;  // [m]
   double maximum_turning_radius;  // [m]
   int turning_radius_size;        // discretized turning radius table size [-]
@@ -129,19 +128,18 @@ struct PlannerWaypoints
 class AbstractPlanningAlgorithm
 {
 public:
-  explicit AbstractPlanningAlgorithm(const PlannerCommonParam & planner_common_param)
-  : planner_common_param_(planner_common_param)
+  AbstractPlanningAlgorithm(
+    const PlannerCommonParam & planner_common_param, const VehicleShape & collision_vehicle_shape)
+  : planner_common_param_(planner_common_param), collision_vehicle_shape_(collision_vehicle_shape)
   {
   }
+
   virtual void setMap(const nav_msgs::msg::OccupancyGrid & costmap);
   virtual bool makePlan(
     const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose) = 0;
   virtual bool hasFeasibleSolution() = 0;  // currently used only in testing
-  void setVehicleShape(const VehicleShape & vehicle_shape)
-  {
-    planner_common_param_.vehicle_shape = vehicle_shape;
-  }
-  bool hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const;
+  virtual bool hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const;
+  double getSolutionCost() const { return solution_cost_; }
   const PlannerWaypoints & getWaypoints() const { return waypoints_; }
   virtual ~AbstractPlanningAlgorithm() {}
 
@@ -167,6 +165,7 @@ protected:
   }
 
   PlannerCommonParam planner_common_param_;
+  const VehicleShape collision_vehicle_shape_;
 
   // costmap as occupancy grid
   nav_msgs::msg::OccupancyGrid costmap_;
@@ -183,6 +182,9 @@ protected:
 
   // result path
   PlannerWaypoints waypoints_;
+
+  // result cost
+  double solution_cost_;
 };
 
 }  // namespace freespace_planning_algorithms
