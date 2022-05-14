@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "freespace_planning_algorithms/grid_informed_rrtstar.h"
+#include "freespace_planning_algorithms/grid_informed_rrtstar.hpp"
 
 namespace freespace_planning_algorithms
 {

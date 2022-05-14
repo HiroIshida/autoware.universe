@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef FREESPACE_PLANNING_ALGORITHMS__GRID_INFORMED_RRTSTAR_H_
-#define FREESPACE_PLANNING_ALGORITHMS__GRID_INFORMED_RRTSTAR_H_
+#ifndef FREESPACE_PLANNING_ALGORITHMS__GRID_INFORMED_RRTSTAR_HPP_
+#define FREESPACE_PLANNING_ALGORITHMS__GRID_INFORMED_RRTSTAR_HPP_
 
 #include "freespace_planning_algorithms/abstract_algorithm.hpp"
 #include "freespace_planning_algorithms/informed_rrtstar.hpp"
@@ -52,4 +52,4 @@ private:
 
 }  // namespace freespace_planning_algorithms
 
-#endif  // FREESPACE_PLANNING_ALGORITHMS__GRID_INFORMED_RRTSTAR_H_
+#endif  // FREESPACE_PLANNING_ALGORITHMS__GRID_INFORMED_RRTSTAR_HPP_
