@@ -179,7 +179,7 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_astar(bool use_multi)
   return algo;
 }
 
-std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_rrtstar(bool update)
+std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_rrtstar(bool informed, bool update)
 {
   auto planner_common_param = get_default_planner_params();
   if (update) {
@@ -187,15 +187,21 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_rrtstar(bool update)
   }
 
   // configure rrtstar param
-  const bool enable_update = update;
   const double mu = 12.0;
   const double margin = 0.2;
-  const auto rrtstar_param = fpa::RRTStarParam{enable_update, mu, margin};
+  const auto rrtstar_param = fpa::RRTStarParam{update, informed, mu, margin};
   auto algo = std::make_unique<fpa::RRTStar>(planner_common_param, vehicle_shape, rrtstar_param);
   return algo;
 }
 
-enum AlgorithmType { ASTAR_SINGLE, ASTAR_MULTI, RRTSTAR_FASTEST, RRTSTAR_UPDATE };
+enum AlgorithmType {
+  ASTAR_SINGLE,
+  ASTAR_MULTI,
+  RRTSTAR_FASTEST,
+  RRTSTAR_UPDATE,
+  INFORMED_RRTSTAR_FASTEST,
+  INFORMED_RRTSTAR_UPDATE
+};
 std::unordered_map<AlgorithmType, std::string> rosbag_dir_prefix_table(
   {{ASTAR_SINGLE, "astar_single"},
    {ASTAR_MULTI, "astar_multi"},
@@ -210,10 +216,13 @@ bool test_algorithm(enum AlgorithmType algo_type)
   } else if (algo_type == AlgorithmType::ASTAR_MULTI) {
     algo = configure_astar(false);
   } else if (algo_type == AlgorithmType::RRTSTAR_FASTEST) {
-    algo = configure_rrtstar(false);
+    algo = configure_rrtstar(false, false);
   } else if (algo_type == AlgorithmType::RRTSTAR_UPDATE) {
-    algo = configure_rrtstar(true);
-    ;
+    algo = configure_rrtstar(false, true);
+  } else if (algo_type == AlgorithmType::INFORMED_RRTSTAR_FASTEST) {
+    algo = configure_rrtstar(true, false);
+  } else if (algo_type == AlgorithmType::INFORMED_RRTSTAR_UPDATE) {
+    algo = configure_rrtstar(true, true);
   } else {
     throw std::runtime_error("invalid algorithm time");
   }
@@ -224,7 +233,8 @@ bool test_algorithm(enum AlgorithmType algo_type)
 
   rclcpp::Clock clock{RCL_SYSTEM_TIME};
   for (size_t i = 0; i < goal_poses.size(); ++i) {
-    const std::string dir_name = rosbag_dir_prefix_table[algo_type] + "-case" + std::to_string(i);
+    const std::string dir_name =
+      "/tmp/" + rosbag_dir_prefix_table[algo_type] + "-case" + std::to_string(i);
     const auto goal_pose = goal_poses.at(i);
 
     bool success_local = true;
@@ -318,6 +328,16 @@ TEST(AstarSearchTestSuite, MultiCurvature)
 TEST(RRTStarTestSuite, Fastetst) { EXPECT_TRUE(test_algorithm(AlgorithmType::RRTSTAR_FASTEST)); }
 
 TEST(RRTStarTestSuite, Update) { EXPECT_TRUE(test_algorithm(AlgorithmType::RRTSTAR_UPDATE)); }
+
+TEST(RRTStarTestSuite, FastetstInformed)
+{
+  EXPECT_TRUE(test_algorithm(AlgorithmType::INFORMED_RRTSTAR_FASTEST));
+}
+
+TEST(RRTStarTestSuite, UpdateInformed)
+{
+  EXPECT_TRUE(test_algorithm(AlgorithmType::INFORMED_RRTSTAR_UPDATE));
+}
 
 int main(int argc, char ** argv)
 {

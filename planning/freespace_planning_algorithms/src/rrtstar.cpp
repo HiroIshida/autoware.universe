@@ -79,7 +79,7 @@ bool RRTStar::makePlan(
     return false;
   }
 
-  const bool is_informed = true;  // always better
+  const bool is_informed = rrtstar_param_.use_informed_sampling;  // always better
   const double collision_check_resolution = rrtstar_param_.margin * 2;
   auto algo = rrtstar_core::RRTStar(
     x_start, x_goal, rrtstar_param_.mu, collision_check_resolution, is_informed, cspace);

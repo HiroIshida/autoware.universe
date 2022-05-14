@@ -26,8 +26,9 @@ struct RRTStarParam
 {
   // algorithm configs
   bool enable_update;  // update solution even after feasible solution found with given time budget
-  double mu;           // neighbore radius [m]
-  double margin;       // [m]
+  bool use_informed_sampling;  // use informed sampling (informed rrtstar)
+  double mu;                   // neighbore radius [m]
+  double margin;               // [m]
 };
 
 class RRTStar : public AbstractPlanningAlgorithm
