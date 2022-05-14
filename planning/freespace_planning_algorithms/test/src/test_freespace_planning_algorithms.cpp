@@ -35,7 +35,9 @@
 
 namespace fpa = freespace_planning_algorithms;
 
-const fpa::VehicleShape vehicle_shape = fpa::VehicleShape{5.5, 2.75, 1.5};
+const double length_lexas = 5.5;
+const double width_lexas = 2.75;
+const fpa::VehicleShape vehicle_shape = fpa::VehicleShape{length_lexas, width_lexas, 1.5};
 const double pi = 3.1415926;
 const std::array<double, 3> start_pose{5.5, 4., pi * 0.5};
 const std::array<double, 3> goal_pose1{8.0, 26.3, pi * 1.5};   // easiest
@@ -75,28 +77,64 @@ nav_msgs::msg::OccupancyGrid construct_cost_map(
   costmap_msg.info.resolution = resolution;
 
   // create data
-  costmap_msg.data.resize(width * height);
+  const size_t n_elem = width * height;
+  for (int i = 0; i < n_elem; ++i) {
+    costmap_msg.data.push_back(0.0);
+  }
 
-  for (int i = 0; i < n_padding; i++) {
+  for (int i = 0; i < n_padding; ++i) {
     // fill left
-    for (int j = width * i; j <= width * (i + 1); j++) {
+    for (int j = width * i; j <= width * (i + 1); ++j) {
       costmap_msg.data[j] = 100.0;
     }
     // fill right
-    for (int j = width * (height - n_padding + i); j <= width * (height - n_padding + i + 1); j++) {
+    for (int j = width * (height - n_padding + i); j <= width * (height - n_padding + i + 1); ++j) {
       costmap_msg.data[j] = 100.0;
     }
   }
 
-  for (int i = 0; i < height; i++) {
+  for (int i = 0; i < height; ++i) {
     // fill bottom
-    for (int j = i * width; j <= i * width + n_padding; j++) {
+    for (int j = i * width; j <= i * width + n_padding; ++j) {
       costmap_msg.data[j] = 100.0;
     }
-    for (int j = (i + 1) * width - n_padding; j <= (i + 1) * width; j++) {
+    for (int j = (i + 1) * width - n_padding; j <= (i + 1) * width; ++j) {
       costmap_msg.data[j] = 100.0;
     }
   }
+
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j < width; ++j) {
+      const double x = j * resolution;
+      const double y = i * resolution;
+      // wall
+      if (8.0 < x && x < 28.0 && 9.0 < y && y < 9.5) {
+        costmap_msg.data[i * width + j] = 100.0;
+      }
+
+      // car1
+      if (10.0 < x && x < 10.0 + width_lexas && 22.0 < y && y < 22.0 + length_lexas) {
+        costmap_msg.data[i * width + j] = 100.0;
+      }
+
+      // car2
+      if (13.5 < x && x < 13.5 + width_lexas && 22.0 < y && y < 22.0 + length_lexas) {
+        costmap_msg.data[i * width + j] = 100.0;
+      }
+
+      // car3
+      if (20.0 < x && x < 20.0 + width_lexas && 22.0 < y && y < 22.0 + length_lexas) {
+        costmap_msg.data[i * width + j] = 100.0;
+      }
+
+      // car4
+      if (10.0 < x && x < 10.0 + width_lexas && 10.0 < y && y < 10.0 + length_lexas) {
+        costmap_msg.data[i * width + j] = 100.0;
+      }
+    }
+  }
+  return costmap_msg;
+
   return costmap_msg;
 }
 
