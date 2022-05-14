@@ -255,7 +255,7 @@ bool test_algorithm(enum AlgorithmType algo_type)
         }
         const rclcpp::Time now = clock.now();
         time_sum += (now - begin).seconds() * 1000.0;
-        cost_sum += algo->getSolutionCost();
+        cost_sum += algo->getWaypoints().compute_length();
       }
       msec = time_sum / N_mc;  // average performance
       cost = cost_sum / N_mc;
@@ -265,7 +265,7 @@ bool test_algorithm(enum AlgorithmType algo_type)
       success_local = algo->makePlan(create_pose_msg(start_pose), create_pose_msg(goal_pose));
       const rclcpp::Time now = clock.now();
       msec = (now - begin).seconds() * 1000.0;
-      cost = algo->getSolutionCost();
+      cost = algo->getWaypoints().compute_length();
     }
 
     if (success_local) {

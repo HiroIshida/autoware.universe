@@ -101,7 +101,6 @@ bool RRTStar::makePlan(
   }
   const auto waypoints = algo.sampleSolutionWaypoints(costmap_.info.resolution);
   setRRTPath(waypoints);
-  solution_cost_ = algo.getSolutionCost();
   return true;
 }
 

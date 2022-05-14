@@ -123,6 +123,8 @@ struct PlannerWaypoints
 {
   std_msgs::msg::Header header;
   std::vector<PlannerWaypoint> waypoints;
+
+  double compute_length() const;
 };
 
 class AbstractPlanningAlgorithm
@@ -138,7 +140,6 @@ public:
   virtual bool makePlan(
     const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose) = 0;
   virtual bool hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const;
-  double getSolutionCost() const { return solution_cost_; }
   const PlannerWaypoints & getWaypoints() const { return waypoints_; }
   virtual ~AbstractPlanningAlgorithm() {}
 
@@ -181,9 +182,6 @@ protected:
 
   // result path
   PlannerWaypoints waypoints_;
-
-  // result cost
-  double solution_cost_;
 };
 
 }  // namespace freespace_planning_algorithms
