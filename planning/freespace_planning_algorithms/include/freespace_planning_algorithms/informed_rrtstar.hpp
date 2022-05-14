@@ -16,7 +16,7 @@
 #define FREESPACE_PLANNING_ALGORITHMS__INFORMED_RRTSTAR_HPP_
 
 #include "freespace_planning_algorithms/abstract_algorithm.hpp"
-#include "freespace_planning_algorithms/informed_rrtstar_core.hpp"
+#include "freespace_planning_algorithms/rrtstar_core.hpp"
 
 #include <vector>
 
