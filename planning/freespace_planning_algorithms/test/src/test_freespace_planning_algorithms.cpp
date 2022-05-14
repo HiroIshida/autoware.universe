@@ -14,7 +14,7 @@
 
 #include "freespace_planning_algorithms/abstract_algorithm.hpp"
 #include "freespace_planning_algorithms/astar_search.hpp"
-#include "freespace_planning_algorithms/informed_rrtstar.hpp"
+#include "freespace_planning_algorithms/rrtstar.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <rcpputils/filesystem_helper.hpp>
@@ -191,8 +191,7 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_rrtstar(bool update)
   const double mu = 12.0;
   const double margin = 0.2;
   const auto rrtstar_param = fpa::RRTStarParam{enable_update, mu, margin};
-  auto algo =
-    std::make_unique<fpa::GridInformedRRTStar>(planner_common_param, vehicle_shape, rrtstar_param);
+  auto algo = std::make_unique<fpa::RRTStar>(planner_common_param, vehicle_shape, rrtstar_param);
   return algo;
 }
 

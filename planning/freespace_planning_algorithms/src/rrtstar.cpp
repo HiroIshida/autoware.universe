@@ -27,7 +27,7 @@ rrtstar_core::Pose posemsgToPose(const geometry_msgs::msg::Pose & pose_msg)
 
 namespace freespace_planning_algorithms
 {
-GridInformedRRTStar::GridInformedRRTStar(
+RRTStar::RRTStar(
   const PlannerCommonParam & planner_common_param, const VehicleShape & original_vehicle_shape,
   const RRTStarParam & rrtstar_param)
 : AbstractPlanningAlgorithm(
@@ -47,7 +47,7 @@ GridInformedRRTStar::GridInformedRRTStar(
   }
 }
 
-bool GridInformedRRTStar::makePlan(
+bool RRTStar::makePlan(
   const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose)
 {
   const rclcpp::Time begin = rclcpp::Clock(RCL_ROS_TIME).now();
@@ -105,8 +105,7 @@ bool GridInformedRRTStar::makePlan(
   return true;
 }
 
-bool GridInformedRRTStar::hasObstacleOnTrajectory(
-  const geometry_msgs::msg::PoseArray & trajectory) const
+bool RRTStar::hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const
 {
   for (const auto & pose : trajectory.poses) {
     const auto pose_local = global2local(costmap_, pose);
@@ -119,7 +118,7 @@ bool GridInformedRRTStar::hasObstacleOnTrajectory(
   return false;
 }
 
-void GridInformedRRTStar::setRRTPath(const std::vector<rrtstar_core::Pose> & waypoints)
+void RRTStar::setRRTPath(const std::vector<rrtstar_core::Pose> & waypoints)
 {
   std_msgs::msg::Header header;
   header.stamp = rclcpp::Clock(RCL_ROS_TIME).now();

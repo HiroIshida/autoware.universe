@@ -30,10 +30,10 @@ struct RRTStarParam
   double margin;       // [m]
 };
 
-class GridInformedRRTStar : public AbstractPlanningAlgorithm
+class RRTStar : public AbstractPlanningAlgorithm
 {
 public:
-  explicit GridInformedRRTStar(
+  explicit RRTStar(
     const PlannerCommonParam & planner_common_param, const VehicleShape & original_vehicle_shape,
     const RRTStarParam & rrtstar_param);
   bool makePlan(
