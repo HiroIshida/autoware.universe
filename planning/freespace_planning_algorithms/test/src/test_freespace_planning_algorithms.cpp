@@ -114,35 +114,37 @@ bool test_astar(
 
   auto astar = fpa::AstarSearch(planner_common_param, astar_param);
 
-  auto costmap_msg = construct_cost_map(150, 150, 0.2, 10);
-  astar.setMap(costmap_msg);
+  for (size_t i = 0; i < 10; ++i) {
+    auto costmap_msg = construct_cost_map(150, 150, 0.2, 10);
+    astar.setMap(costmap_msg);
 
-  rclcpp::Clock clock{RCL_SYSTEM_TIME};
-  const rclcpp::Time begin = clock.now();
-  bool success = astar.makePlan(construct_pose_msg(start), construct_pose_msg(goal));
-  const rclcpp::Time now = clock.now();
-  const double msec = (now - begin).seconds() * 1000.0;
-  if (success) {
-    std::cout << "plan success : " << msec << "[msec]" << std::endl;
-  } else {
-    std::cout << "plan fail : " << msec << "[msec]" << std::endl;
-  }
-  auto result = astar.getWaypoints();
+    rclcpp::Clock clock{RCL_SYSTEM_TIME};
+    const rclcpp::Time begin = clock.now();
+    bool success = astar.makePlan(construct_pose_msg(start), construct_pose_msg(goal));
+    const rclcpp::Time now = clock.now();
+    const double msec = (now - begin).seconds() * 1000.0;
+    if (success) {
+      std::cout << "plan success : " << msec << "[msec]" << std::endl;
+    } else {
+      std::cout << "plan fail : " << msec << "[msec]" << std::endl;
+    }
+    auto result = astar.getWaypoints();
 
-  // dump waypoints (will be used for debugging. the dumped file can be loaded by debug_plot.py)
-  std::ofstream file(file_name);
-  file << msec << std::endl;
-  file << start[0] << ", " << start[1] << ", " << start[2] << std::endl;
-  file << goal[0] << ", " << goal[1] << ", " << goal[2] << std::endl;
-  for (auto & point : result.waypoints) {
-    auto & pos = point.pose.pose.position;
-    auto & ori = point.pose.pose.orientation;
-    file << pos.x << ", " << pos.y << ", " << tf2::getYaw(ori) << std::endl;
+    // dump waypoints (will be used for debugging. the dumped file can be loaded by debug_plot.py)
+    std::ofstream file(file_name);
+    file << msec << std::endl;
+    file << start[0] << ", " << start[1] << ", " << start[2] << std::endl;
+    file << goal[0] << ", " << goal[1] << ", " << goal[2] << std::endl;
+    for (auto & point : result.waypoints) {
+      auto & pos = point.pose.pose.position;
+      auto & ori = point.pose.pose.orientation;
+      file << pos.x << ", " << pos.y << ", " << tf2::getYaw(ori) << std::endl;
+    }
+    file.close();
   }
-  file.close();
 
   // backtrace the path and confirm that the entire path is collision-free
-  return success && astar.hasFeasibleSolution();
+  return astar.hasFeasibleSolution();
 }
 
 TEST(AstarSearchTestSuite, SingleCurvature)

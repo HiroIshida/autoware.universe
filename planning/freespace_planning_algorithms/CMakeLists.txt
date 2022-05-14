@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.14)
 project(freespace_planning_algorithms)
 
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
+
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
