@@ -14,7 +14,7 @@
 
 #include "freespace_planning_algorithms/abstract_algorithm.hpp"
 #include "freespace_planning_algorithms/astar_search.hpp"
-#include "freespace_planning_algorithms/grid_informed_rrtstar.hpp"
+#include "freespace_planning_algorithms/informed_rrtstar.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <rcpputils/filesystem_helper.hpp>
