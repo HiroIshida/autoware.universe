@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "freespace_planning_algorithms/abstract_algorithm.hpp"
 #include "freespace_planning_algorithms/astar_search.hpp"
+#include "freespace_planning_algorithms/grid_informed_rrtstar.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <rcpputils/filesystem_helper.hpp>
@@ -24,12 +26,24 @@
 #include <rcutils/time.h>
 #include <tf2/utils.h>
 
+#include <algorithm>
 #include <array>
 #include <fstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace fpa = freespace_planning_algorithms;
+
+const fpa::VehicleShape vehicle_shape = fpa::VehicleShape{5.5, 2.75, 1.5};
+const double pi = 3.1415926;
+const std::array<double, 3> start_pose{5.5, 4., pi * 0.5};
+const std::array<double, 3> goal_pose1{8.0, 26.3, pi * 1.5};   // easiest
+const std::array<double, 3> goal_pose2{15.0, 11.6, pi * 0.5};  // second easiest
+const std::array<double, 3> goal_pose3{18.4, 26.3, pi * 1.5};  // third easiest
+const std::array<double, 3> goal_pose4{25.0, 26.3, pi * 1.5};  // most difficult
+const std::array<std::array<double, 3>, 4> goal_poses{
+  goal_pose1, goal_pose2, goal_pose3, goal_pose4};
 
 geometry_msgs::msg::Pose create_pose_msg(std::array<double, 3> pose3d)
 {
@@ -113,26 +127,26 @@ void add_message_to_rosbag(
   writer.write(bag_message);
 }
 
-bool test_astar(
-  std::array<double, 3> start, std::array<double, 3> goal, std::string dir_name,
-  double maximum_turning_radius = 9.0, int turning_radius_size = 1)
+fpa::PlannerCommonParam get_default_planner_params()
 {
   // set problem configuration
-  fpa::VehicleShape shape{5.5, 2.75, 1.5};
+  const double time_limit = 10 * 1000.0;
+  const double minimum_turning_radius = 9.0;
+  const double maximum_turning_radius = 9.0;
+  const int turning_radius_size = 1;
 
-  double time_limit = 10000000.0;
-  double minimum_turning_radius = 9.0;
-  // double maximum_turning_radius is a parameter
-  // int turning_radius_size is a parameter
-  int theta_size = 144;
-  double curve_weight = 1.2;
-  double reverse_weight = 2;
-  double lateral_goal_range = 0.5;
-  double longitudinal_goal_range = 2.0;
-  double angle_goal_range = 6.0;
-  int obstacle_threshold = 100;
+  const int theta_size = 144;
 
-  fpa::PlannerCommonParam planner_common_param{
+  // Setting weight to 1.0 to fairly compare all algorithms
+  const double curve_weight = 1.0;
+  const double reverse_weight = 1.0;
+
+  const double lateral_goal_range = 0.5;
+  const double longitudinal_goal_range = 2.0;
+  const double angle_goal_range = 6.0;
+  const int obstacle_threshold = 100;
+
+  return fpa::PlannerCommonParam{
     time_limit,
     minimum_turning_radius,
     maximum_turning_radius,
@@ -144,97 +158,167 @@ bool test_astar(
     longitudinal_goal_range,
     angle_goal_range,
     obstacle_threshold};
+}
 
-  bool only_behind_solutions = false;
-  bool use_back = true;
-  double distance_heuristic_weight = 1.0;
-  fpa::AstarParam astar_param{only_behind_solutions, use_back, distance_heuristic_weight};
+std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_astar(bool use_multi)
+{
+  auto planner_common_param = get_default_planner_params();
+  if (use_multi) {
+    planner_common_param.maximum_turning_radius = 14.0;
+    planner_common_param.turning_radius_size = 3;
+  }
 
-  auto astar = fpa::AstarSearch(planner_common_param, shape, astar_param);
+  // configure astar param
+  const bool only_behind_solutions = false;
+  const bool use_back = true;
+  const double distance_heuristic_weight = 1.0;
+  const auto astar_param =
+    fpa::AstarParam{only_behind_solutions, use_back, distance_heuristic_weight};
 
-  auto costmap_msg = construct_cost_map(150, 150, 0.2, 10);
-  astar.setMap(costmap_msg);
+  auto algo = std::make_unique<fpa::AstarSearch>(planner_common_param, vehicle_shape, astar_param);
+  return algo;
+}
+
+std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_rrtstar(bool update)
+{
+  auto planner_common_param = get_default_planner_params();
+  if (update) {
+    planner_common_param.time_limit = 2000.0;
+  }
+
+  // configure rrtstar param
+  const bool enable_update = update;
+  const double mu = 12.0;
+  const double margin = 0.2;
+  const auto rrtstar_param = fpa::RRTStarParam{enable_update, mu, margin};
+  auto algo =
+    std::make_unique<fpa::GridInformedRRTStar>(planner_common_param, vehicle_shape, rrtstar_param);
+  return algo;
+}
+
+enum AlgorithmType { ASTAR_SINGLE, ASTAR_MULTI, RRTSTAR_FASTEST, RRTSTAR_UPDATE };
+std::unordered_map<AlgorithmType, std::string> rosbag_dir_prefix_table(
+  {{ASTAR_SINGLE, "astar_single"},
+   {ASTAR_MULTI, "astar_multi"},
+   {RRTSTAR_FASTEST, "rrtstar_fastest"},
+   {RRTSTAR_UPDATE, "rrtstar_update"}});
+
+bool test_algorithm(enum AlgorithmType algo_type)
+{
+  std::unique_ptr<fpa::AbstractPlanningAlgorithm> algo;
+  if (algo_type == AlgorithmType::ASTAR_SINGLE) {
+    algo = configure_astar(true);
+  } else if (algo_type == AlgorithmType::ASTAR_MULTI) {
+    algo = configure_astar(false);
+  } else if (algo_type == AlgorithmType::RRTSTAR_FASTEST) {
+    algo = configure_rrtstar(false);
+  } else if (algo_type == AlgorithmType::RRTSTAR_UPDATE) {
+    algo = configure_rrtstar(true);
+    ;
+  } else {
+    throw std::runtime_error("invalid algorithm time");
+  }
+
+  // All algorithms have the same interface.
+  const auto costmap_msg = construct_cost_map(150, 150, 0.2, 10);
+  bool success_all = true;  // if any local test below fails, overwrite this function
 
   rclcpp::Clock clock{RCL_SYSTEM_TIME};
-  const rclcpp::Time begin = clock.now();
-  bool is_success = astar.makePlan(create_pose_msg(start), create_pose_msg(goal));
-  const rclcpp::Time now = clock.now();
-  const double msec = (now - begin).seconds() * 1000.0;
-  if (is_success) {
-    std::cout << "plan success : " << msec << "[msec]" << std::endl;
-  } else {
-    std::cout << "plan fail : " << msec << "[msec]" << std::endl;
+  for (size_t i = 0; i < goal_poses.size(); ++i) {
+    const std::string dir_name = rosbag_dir_prefix_table[algo_type] + "-case" + std::to_string(i);
+    const auto goal_pose = goal_poses.at(i);
+
+    bool success_local = true;
+
+    algo->setMap(costmap_msg);
+    double msec;
+    double cost;
+
+    if (algo_type == RRTSTAR_FASTEST || algo_type == RRTSTAR_UPDATE) {
+      std::cout << "measuring average performance ..." << std::endl;
+      const size_t N_mc = (algo_type == RRTSTAR_UPDATE ? 5 : 100);
+      double time_sum = 0.0;
+      double cost_sum = 0.0;
+      for (size_t j = 0; j < N_mc; j++) {
+        const rclcpp::Time begin = clock.now();
+        if (!algo->makePlan(create_pose_msg(start_pose), create_pose_msg(goal_pose))) {
+          success_local = false;
+        }
+        const rclcpp::Time now = clock.now();
+        time_sum += (now - begin).seconds() * 1000.0;
+        cost_sum += algo->getSolutionCost();
+      }
+      msec = time_sum / N_mc;  // average performance
+      cost = cost_sum / N_mc;
+
+    } else {
+      const rclcpp::Time begin = clock.now();
+      success_local = algo->makePlan(create_pose_msg(start_pose), create_pose_msg(goal_pose));
+      const rclcpp::Time now = clock.now();
+      msec = (now - begin).seconds() * 1000.0;
+      cost = algo->getSolutionCost();
+    }
+
+    if (success_local) {
+      std::cout << "plan success : " << msec << "[msec]"
+                << ", solution cost : " << cost << std::endl;
+    } else {
+      success_all = false;
+      std::cout << "plan fail : " << msec << "[msec]" << std::endl;
+    }
+    const auto result = algo->getWaypoints();
+    geometry_msgs::msg::PoseArray trajectory;
+    for (const auto & pose : result.waypoints) {
+      trajectory.poses.push_back(pose.pose.pose);
+    }
+    if (algo->hasObstacleOnTrajectory(trajectory)) {
+      std::cout << "not feasible trajectory" << std::endl;
+      success_all = false;
+    }
+
+    rcpputils::fs::remove_all(dir_name);
+
+    rosbag2_storage::StorageOptions storage_options;
+    storage_options.uri = dir_name;
+    storage_options.storage_id = "sqlite3";
+
+    rosbag2_cpp::ConverterOptions converter_options;
+    converter_options.input_serialization_format = "cdr";
+    converter_options.output_serialization_format = "cdr";
+
+    rosbag2_cpp::Writer writer(std::make_unique<rosbag2_cpp::writers::SequentialWriter>());
+    writer.open(storage_options, converter_options);
+
+    add_message_to_rosbag(
+      writer, create_float_msg(vehicle_shape.length), "vehicle_length", "std_msgs/msg/Float63");
+    add_message_to_rosbag(
+      writer, create_float_msg(vehicle_shape.width), "vehicle_width", "std_msgs/msg/Float63");
+    add_message_to_rosbag(
+      writer, create_float_msg(vehicle_shape.base2back), "vehicle_base2back",
+      "std_msgs/msg/Float64");
+
+    add_message_to_rosbag(writer, costmap_msg, "costmap", "nav_msgs/msg/OccupancyGrid");
+    add_message_to_rosbag(writer, create_pose_msg(start_pose), "start", "geometry_msgs/msg/Pose");
+    add_message_to_rosbag(writer, create_pose_msg(goal_pose), "goal", "geometry_msgs/msg/Pose");
+    add_message_to_rosbag(writer, trajectory, "trajectory", "geometry_msgs/msg/PoseArray");
+    add_message_to_rosbag(writer, create_float_msg(msec), "elapsed_time", "std_msgs/msg/Float63");
   }
-  auto result = astar.getWaypoints();
-
-  geometry_msgs::msg::PoseArray result_trajectory;
-  for (const auto & pose : result.waypoints) {
-    result_trajectory.poses.push_back(pose.pose.pose);
-  }
-
-  rcpputils::fs::remove_all(dir_name);
-
-  rosbag2_storage::StorageOptions storage_options;
-  storage_options.uri = dir_name;
-  storage_options.storage_id = "sqlite3";
-
-  rosbag2_cpp::ConverterOptions converter_options;
-  converter_options.input_serialization_format = "cdr";
-  converter_options.output_serialization_format = "cdr";
-
-  rosbag2_cpp::Writer writer(std::make_unique<rosbag2_cpp::writers::SequentialWriter>());
-  writer.open(storage_options, converter_options);
-
-  add_message_to_rosbag(
-    writer, create_float_msg(shape.length), "vehicle_length", "std_msgs/msg/Float64");
-  add_message_to_rosbag(
-    writer, create_float_msg(shape.width), "vehicle_width", "std_msgs/msg/Float64");
-  add_message_to_rosbag(
-    writer, create_float_msg(shape.base2back), "vehicle_base2back", "std_msgs/msg/Float64");
-
-  add_message_to_rosbag(writer, costmap_msg, "costmap", "nav_msgs/msg/OccupancyGrid");
-  add_message_to_rosbag(writer, create_pose_msg(start), "start", "geometry_msgs/msg/Pose");
-  add_message_to_rosbag(writer, create_pose_msg(goal), "goal", "geometry_msgs/msg/Pose");
-  add_message_to_rosbag(writer, result_trajectory, "trajectory", "geometry_msgs/msg/PoseArray");
-  add_message_to_rosbag(writer, create_float_msg(msec), "elapsed_time", "std_msgs/msg/Float64");
-
-  geometry_msgs::msg::PoseArray trajectory;
-  for (const auto & pose : result.waypoints) {
-    trajectory.poses.push_back(pose.pose.pose);
-  }
-
-  if (astar.hasObstacleOnTrajectory(trajectory)) {
-    std::cout << "not feasible trajectory" << std::endl;
-    return false;
-  }
-
-  // backtrace the path and confirm that the entire path is collision-free
-  return is_success;
+  return success_all;
 }
 
 TEST(AstarSearchTestSuite, SingleCurvature)
 {
-  std::vector<double> goal_xs{8., 12., 16., 26.};
-  for (size_t i = 0; i < goal_xs.size(); i++) {
-    std::array<double, 3> start{6., 4., 0.5 * 3.1415};
-    std::array<double, 3> goal{goal_xs[i], 4., 0.5 * 3.1415};
-    std::string dir_name = "/tmp/fpalgos-result_single" + std::to_string(i);
-    EXPECT_TRUE(test_astar(start, goal, dir_name));
-  }
+  EXPECT_TRUE(test_algorithm(AlgorithmType::ASTAR_SINGLE));
 }
 
 TEST(AstarSearchTestSuite, MultiCurvature)
 {
-  std::vector<double> goal_xs{8., 12., 16., 26.};
-  double maximum_turning_radius = 14.0;
-  int turning_radius_size = 3;
-  for (size_t i = 0; i < goal_xs.size(); i++) {
-    std::array<double, 3> start{6., 4., 0.5 * 3.1415};
-    std::array<double, 3> goal{goal_xs[i], 4., 0.5 * 3.1415};
-    std::string dir_name = "/tmp/fpalgos-result_multi" + std::to_string(i);
-    EXPECT_TRUE(test_astar(start, goal, dir_name, maximum_turning_radius, turning_radius_size));
-  }
+  EXPECT_TRUE(test_algorithm(AlgorithmType::ASTAR_MULTI));
 }
+
+TEST(RRTStarTestSuite, Fastetst) { EXPECT_TRUE(test_algorithm(AlgorithmType::RRTSTAR_FASTEST)); }
+
+TEST(RRTStarTestSuite, Update) { EXPECT_TRUE(test_algorithm(AlgorithmType::RRTSTAR_UPDATE)); }
 
 int main(int argc, char ** argv)
 {
