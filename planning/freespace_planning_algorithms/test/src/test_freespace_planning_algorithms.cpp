@@ -203,10 +203,12 @@ enum AlgorithmType {
   INFORMED_RRTSTAR_UPDATE
 };
 std::unordered_map<AlgorithmType, std::string> rosbag_dir_prefix_table(
-  {{ASTAR_SINGLE, "astar_single"},
-   {ASTAR_MULTI, "astar_multi"},
-   {RRTSTAR_FASTEST, "rrtstar_fastest"},
-   {RRTSTAR_UPDATE, "rrtstar_update"}});
+  {{ASTAR_SINGLE, "fpalgos-astar_single"},
+   {ASTAR_MULTI, "fpalgos-astar_multi"},
+   {RRTSTAR_FASTEST, "fpalgos-rrtstar_fastest"},
+   {RRTSTAR_UPDATE, "fpalgos-rrtstar_update"},
+   {INFORMED_RRTSTAR_FASTEST, "fpalgos-informed_rrtstar_fastest"},
+   {INFORMED_RRTSTAR_UPDATE, "fpalgos-informed_rrtstar_update"}});
 
 bool test_algorithm(enum AlgorithmType algo_type)
 {
@@ -299,9 +301,9 @@ bool test_algorithm(enum AlgorithmType algo_type)
     writer.open(storage_options, converter_options);
 
     add_message_to_rosbag(
-      writer, create_float_msg(vehicle_shape.length), "vehicle_length", "std_msgs/msg/Float63");
+      writer, create_float_msg(vehicle_shape.length), "vehicle_length", "std_msgs/msg/Float64");
     add_message_to_rosbag(
-      writer, create_float_msg(vehicle_shape.width), "vehicle_width", "std_msgs/msg/Float63");
+      writer, create_float_msg(vehicle_shape.width), "vehicle_width", "std_msgs/msg/Float64");
     add_message_to_rosbag(
       writer, create_float_msg(vehicle_shape.base2back), "vehicle_base2back",
       "std_msgs/msg/Float64");
@@ -310,7 +312,7 @@ bool test_algorithm(enum AlgorithmType algo_type)
     add_message_to_rosbag(writer, create_pose_msg(start_pose), "start", "geometry_msgs/msg/Pose");
     add_message_to_rosbag(writer, create_pose_msg(goal_pose), "goal", "geometry_msgs/msg/Pose");
     add_message_to_rosbag(writer, trajectory, "trajectory", "geometry_msgs/msg/PoseArray");
-    add_message_to_rosbag(writer, create_float_msg(msec), "elapsed_time", "std_msgs/msg/Float63");
+    add_message_to_rosbag(writer, create_float_msg(msec), "elapsed_time", "std_msgs/msg/Float64");
   }
   return success_all;
 }
