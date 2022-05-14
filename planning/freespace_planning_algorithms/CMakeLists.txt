@@ -17,11 +17,11 @@ ament_auto_add_library(reeds_shepp SHARED
   src/reeds_shepp.cpp
 )
 
-ament_auto_add_library(informed_rrtstar SHARED
-  src/informed_rrtstar.cpp
+ament_auto_add_library(informed_rrtstar_core SHARED
+  src/informed_rrtstar_core.cpp
 )
 
-target_link_libraries(informed_rrtstar
+target_link_libraries(informed_rrtstar_core
   reeds_shepp
 )
 
