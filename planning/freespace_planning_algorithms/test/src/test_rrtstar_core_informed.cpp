@@ -18,17 +18,17 @@
 
 int main()
 {
-  const rrtstar::Pose x_start{0.1, 0.1, 0};
-  const rrtstar::Pose x_goal{0.1, 0.9, 0.};
+  const rrtstar_core::Pose x_start{0.1, 0.1, 0};
+  const rrtstar_core::Pose x_goal{0.1, 0.9, 0.};
 
-  const rrtstar::Pose x_lo{0, 0, -6.28};
-  const rrtstar::Pose x_hi{1., 1., +6.28};
-  auto lambda = [](const rrtstar::Pose & p) {
+  const rrtstar_core::Pose x_lo{0, 0, -6.28};
+  const rrtstar_core::Pose x_hi{1., 1., +6.28};
+  auto lambda = [](const rrtstar_core::Pose & p) {
     const double score = (p.x - 0.5) * (p.x - 0.5) + (p.y - 0.5) * (p.y - 0.5);
     return score > 0.09;
   };
-  const auto cspace = rrtstar::CSpace(x_lo, x_hi, 0.2, lambda);
-  auto algo = rrtstar::RRTStar(x_start, x_goal, 0.3, 0.01, true, cspace);
+  const auto cspace = rrtstar_core::CSpace(x_lo, x_hi, 0.2, lambda);
+  auto algo = rrtstar_core::RRTStar(x_start, x_goal, 0.3, 0.01, true, cspace);
 
   clock_t start = clock();
   for (int i = 0; i < 3000; i++) {

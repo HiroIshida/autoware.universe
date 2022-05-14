@@ -19,7 +19,7 @@
 #include <fstream>
 #include <queue>
 
-namespace rrtstar
+namespace rrtstar_core
 {
 CSpace::CSpace(
   const Pose & lo, const Pose & hi, double r, std::function<bool(Pose)> is_obstacle_free)
@@ -370,4 +370,4 @@ void RRTStar::rewire(Node & node_a, Node & node_b)
   }
 }
 
-}  // namespace rrtstar
+}  // namespace rrtstar_core

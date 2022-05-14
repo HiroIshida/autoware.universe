@@ -42,7 +42,7 @@ public:
   bool hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const override;
 
 private:
-  void setRRTPath(const std::vector<rrtstar::Pose> & waypints);
+  void setRRTPath(const std::vector<rrtstar_core::Pose> & waypints);
 
   // algorithm specific param
   const RRTStarParam rrtstar_param_;

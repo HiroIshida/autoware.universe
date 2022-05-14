@@ -17,9 +17,10 @@
 namespace
 {
 
-rrtstar::Pose posemsgToPose(const geometry_msgs::msg::Pose & pose_msg)
+rrtstar_core::Pose posemsgToPose(const geometry_msgs::msg::Pose & pose_msg)
 {
-  return rrtstar::Pose{pose_msg.position.x, pose_msg.position.y, tf2::getYaw(pose_msg.orientation)};
+  return rrtstar_core::Pose{
+    pose_msg.position.x, pose_msg.position.y, tf2::getYaw(pose_msg.orientation)};
 };
 
 }  // namespace
@@ -54,19 +55,19 @@ bool GridInformedRRTStar::makePlan(
   start_pose_ = global2local(costmap_, start_pose);
   goal_pose_ = global2local(costmap_, goal_pose);
 
-  const auto is_obstacle_free = [&](const rrtstar::Pose & pose) {
+  const auto is_obstacle_free = [&](const rrtstar_core::Pose & pose) {
     const size_t index_x = pose.x / costmap_.info.resolution;
     const size_t index_y = pose.y / costmap_.info.resolution;
     const size_t index_theta = discretizeAngle(pose.yaw, planner_common_param_.theta_size);
     return !detectCollision(IndexXYT{index_x, index_y, index_theta});
   };
 
-  const rrtstar::Pose lo{0, 0, 0};
-  const rrtstar::Pose hi{
+  const rrtstar_core::Pose lo{0, 0, 0};
+  const rrtstar_core::Pose hi{
     costmap_.info.resolution * costmap_.info.width, costmap_.info.resolution * costmap_.info.height,
     M_PI};
   const double radius = planner_common_param_.minimum_turning_radius;
-  const auto cspace = rrtstar::CSpace(lo, hi, radius, is_obstacle_free);
+  const auto cspace = rrtstar_core::CSpace(lo, hi, radius, is_obstacle_free);
   const auto x_start = posemsgToPose(start_pose_);
   const auto x_goal = posemsgToPose(goal_pose_);
 
@@ -80,7 +81,7 @@ bool GridInformedRRTStar::makePlan(
 
   const bool is_informed = true;  // always better
   const double collision_check_resolution = rrtstar_param_.margin * 2;
-  auto algo = rrtstar::RRTStar(
+  auto algo = rrtstar_core::RRTStar(
     x_start, x_goal, rrtstar_param_.mu, collision_check_resolution, is_informed, cspace);
   while (true) {
     const rclcpp::Time now = rclcpp::Clock(RCL_ROS_TIME).now();
@@ -118,7 +119,7 @@ bool GridInformedRRTStar::hasObstacleOnTrajectory(
   return false;
 }
 
-void GridInformedRRTStar::setRRTPath(const std::vector<rrtstar::Pose> & waypoints)
+void GridInformedRRTStar::setRRTPath(const std::vector<rrtstar_core::Pose> & waypoints)
 {
   std_msgs::msg::Header header;
   header.stamp = rclcpp::Clock(RCL_ROS_TIME).now();

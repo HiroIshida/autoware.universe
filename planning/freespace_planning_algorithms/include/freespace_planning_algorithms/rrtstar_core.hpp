@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-namespace rrtstar
+namespace rrtstar_core
 {
 using Path = freespace_planning_algorithms::ReedsSheppStateSpace::ReedsSheppPath;
 using Pose = freespace_planning_algorithms::ReedsSheppStateSpace::StateXYT;
@@ -135,6 +135,6 @@ private:
   CSpace cspace_;
 };
 
-}  // namespace rrtstar
+}  // namespace rrtstar_core
 
 #endif  // FREESPACE_PLANNING_ALGORITHMS__RRTSTAR_CORE_HPP_
