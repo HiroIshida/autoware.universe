@@ -63,7 +63,9 @@ using autoware_auto_planning_msgs::msg::HADMapRoute;
 using autoware_auto_planning_msgs::msg::Trajectory;
 using freespace_planning_algorithms::AbstractPlanningAlgorithm;
 using freespace_planning_algorithms::AstarParam;
+using freespace_planning_algorithms::AstarSearch;
 using freespace_planning_algorithms::PlannerCommonParam;
+using freespace_planning_algorithms::VehicleShape;
 using geometry_msgs::msg::PoseArray;
 using geometry_msgs::msg::PoseStamped;
 using geometry_msgs::msg::TransformStamped;
@@ -75,6 +77,7 @@ using tier4_planning_msgs::msg::Scenario;
 struct NodeParam
 {
   std::string planning_algorithm;
+  double collision_margin;    // collision margin [m]
   double waypoints_velocity;  // constant velocity on planned waypoints [km/h]
   double update_rate;         // replanning and publishing rate [Hz]
   double th_arrived_distance_m;
@@ -110,6 +113,7 @@ private:
   NodeParam node_param_;
   PlannerCommonParam planner_common_param_;
   AstarParam astar_param_;
+  VehicleShape vehicle_shape_;
 
   // variables
   std::unique_ptr<AbstractPlanningAlgorithm> algo_;

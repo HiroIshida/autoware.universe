@@ -215,6 +215,7 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
   {
     auto & p = node_param_;
     p.planning_algorithm = declare_parameter("planning_algorithm", "astar");
+    p.collision_margin = declare_parameter("collision_margin", 1.0);
     p.waypoints_velocity = declare_parameter("waypoints_velocity", 5.0);
     p.update_rate = declare_parameter("update_rate", 1.0);
     p.th_arrived_distance_m = declare_parameter("th_arrived_distance_m", 1.0);
@@ -270,22 +271,19 @@ void FreespacePlannerNode::getPlanningCommonParam()
 {
   auto & p = planner_common_param_;
 
-  // base configs
-  p.time_limit = declare_parameter("time_limit", 5000.0);
-
-  // robot configs
   const auto vehicle_info = vehicle_info_util::VehicleInfoUtil(*this).getVehicleInfo();
-  p.vehicle_shape.length = vehicle_info.vehicle_length_m;
-  p.vehicle_shape.width = vehicle_info.vehicle_width_m;
-  p.vehicle_shape.base2back = vehicle_info.rear_overhang_m;
-  // TODO(Kenji Miyake): obtain from vehicle_info
+  vehicle_shape_.length = vehicle_info.vehicle_length_m;
+  vehicle_shape_.width = vehicle_info.vehicle_width_m;
+  vehicle_shape_.base2back = vehicle_info.rear_overhang_m;
+
+  // search configs
+  p.time_limit = declare_parameter("time_limit", 5000.0);
   p.minimum_turning_radius = declare_parameter("minimum_turning_radius", 0.5);
   p.maximum_turning_radius = declare_parameter("maximum_turning_radius", 6.0);
   p.turning_radius_size = declare_parameter("turning_radius_size", 11);
   p.maximum_turning_radius = std::max(p.maximum_turning_radius, p.minimum_turning_radius);
   p.turning_radius_size = std::max(p.turning_radius_size, 1);
 
-  // search configs
   p.theta_size = declare_parameter("theta_size", 48);
   p.angle_goal_range = declare_parameter("angle_goal_range", 6.0);
   p.curve_weight = declare_parameter("curve_weight", 1.2);
@@ -458,16 +456,7 @@ void FreespacePlannerNode::onTimer()
 
 void FreespacePlannerNode::planTrajectory()
 {
-  // Extend robot shape
-  freespace_planning_algorithms::VehicleShape extended_vehicle_shape =
-    planner_common_param_.vehicle_shape;
-  constexpr double margin = 1.0;
-  extended_vehicle_shape.length += margin;
-  extended_vehicle_shape.width += margin;
-  extended_vehicle_shape.base2back += margin / 2;
-
   // Provide robot shape and map for the planner
-  algo_->setVehicleShape(extended_vehicle_shape);
   algo_->setMap(*occupancy_grid_);
 
   // Calculate poses in costmap frame
@@ -523,8 +512,16 @@ TransformStamped FreespacePlannerNode::getTransform(
 
 void FreespacePlannerNode::initializePlanningAlgorithm()
 {
+  // Extend robot shape
+  freespace_planning_algorithms::VehicleShape extended_vehicle_shape = vehicle_shape_;
+  const double margin = node_param_.collision_margin;
+  extended_vehicle_shape.length += margin;
+  extended_vehicle_shape.width += margin;
+  extended_vehicle_shape.base2back += margin / 2;
+
   if (node_param_.planning_algorithm == "astar") {
-    algo_.reset(new AstarSearch(planner_common_param_, astar_param_));
+    algo_ =
+      std::make_unique<AstarSearch>(planner_common_param_, extended_vehicle_shape, astar_param_);
   } else {
     throw std::runtime_error(
       "No such algorithm named " + node_param_.planning_algorithm + " exists.");
