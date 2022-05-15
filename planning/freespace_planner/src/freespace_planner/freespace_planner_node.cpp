@@ -47,6 +47,7 @@ using TrajectoryPoints = std::vector<autoware_auto_planning_msgs::msg::Trajector
 using freespace_planning_algorithms::AstarSearch;
 using freespace_planning_algorithms::PlannerWaypoint;
 using freespace_planning_algorithms::PlannerWaypoints;
+using freespace_planning_algorithms::RRTStar;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseArray;
 using geometry_msgs::msg::PoseStamped;
@@ -230,6 +231,7 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
   // Planning
   getPlanningCommonParam();
   getAstarParam();
+  getRRTStarParam();
 
   // Subscribers
   {
@@ -301,6 +303,15 @@ void FreespacePlannerNode::getAstarParam()
   p.only_behind_solutions = declare_parameter("astar.only_behind_solutions", false);
   p.use_back = declare_parameter("astar.use_back", true);
   p.distance_heuristic_weight = declare_parameter("astar.distance_heuristic_weight", 1.0);
+}
+
+void FreespacePlannerNode::getRRTStarParam()
+{
+  auto & p = rrtstar_param_;
+  p.enable_update = declare_parameter("rrtstar.enable_update", false);
+  p.use_informed_sampling = declare_parameter("rrtstar.use_informed_sampling", true);
+  p.mu = declare_parameter("rrtstar.mu", 2.5);
+  p.margin = declare_parameter("rrtstar.margin", 0.1);
 }
 
 void FreespacePlannerNode::onRoute(const HADMapRoute::ConstSharedPtr msg)
@@ -425,7 +436,6 @@ void FreespacePlannerNode::onTimer()
     return;
   }
 
-  initializePlanningAlgorithm();
   if (isPlanRequired()) {
     reset();
 
@@ -519,13 +529,18 @@ void FreespacePlannerNode::initializePlanningAlgorithm()
   extended_vehicle_shape.width += margin;
   extended_vehicle_shape.base2back += margin / 2;
 
-  if (node_param_.planning_algorithm == "astar") {
+  const auto algo_name = node_param_.planning_algorithm;
+
+  if (algo_name == "astar") {
     algo_ =
       std::make_unique<AstarSearch>(planner_common_param_, extended_vehicle_shape, astar_param_);
+  } else if (algo_name == "rrtstar") {
+    algo_ =
+      std::make_unique<RRTStar>(planner_common_param_, extended_vehicle_shape, rrtstar_param_);
   } else {
-    throw std::runtime_error(
-      "No such algorithm named " + node_param_.planning_algorithm + " exists.");
+    throw std::runtime_error("No such algorithm named " + algo_name + " exists.");
   }
+  RCLCPP_INFO_STREAM(get_logger(), "initialize planning algorithm: " << algo_name);
 }
 }  // namespace freespace_planner
 

@@ -32,6 +32,7 @@
 #define FREESPACE_PLANNER__FREESPACE_PLANNER_NODE_HPP_
 
 #include <freespace_planning_algorithms/astar_search.hpp>
+#include <freespace_planning_algorithms/rrtstar.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <vehicle_info_util/vehicle_info_util.hpp>
 
@@ -65,6 +66,8 @@ using freespace_planning_algorithms::AbstractPlanningAlgorithm;
 using freespace_planning_algorithms::AstarParam;
 using freespace_planning_algorithms::AstarSearch;
 using freespace_planning_algorithms::PlannerCommonParam;
+using freespace_planning_algorithms::RRTStar;
+using freespace_planning_algorithms::RRTStarParam;
 using freespace_planning_algorithms::VehicleShape;
 using geometry_msgs::msg::PoseArray;
 using geometry_msgs::msg::PoseStamped;
@@ -113,6 +116,7 @@ private:
   NodeParam node_param_;
   PlannerCommonParam planner_common_param_;
   AstarParam astar_param_;
+  RRTStarParam rrtstar_param_;
   VehicleShape vehicle_shape_;
 
   // variables
@@ -137,6 +141,7 @@ private:
   // functions used in the constructor
   void getPlanningCommonParam();
   void getAstarParam();
+  void getRRTStarParam();
 
   // functions, callback
   void onRoute(const HADMapRoute::ConstSharedPtr msg);
