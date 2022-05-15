@@ -14,6 +14,16 @@
 
 #include "freespace_planning_algorithms/grid_informed_rrtstar.hpp"
 
+namespace
+{
+
+rrtstar::Pose posemsgToPose(const geometry_msgs::msg::Pose & pose_msg)
+{
+  return rrtstar::Pose{pose_msg.position.x, pose_msg.position.y, tf2::getYaw(pose_msg.orientation)};
+};
+
+}  // namespace
+
 namespace freespace_planning_algorithms
 {
 GridInformedRRTStar::GridInformedRRTStar(
@@ -22,9 +32,9 @@ GridInformedRRTStar::GridInformedRRTStar(
 : AbstractPlanningAlgorithm(
     planner_common_param,
     VehicleShape{
-      original_vehicle_shape.length + 2 * rrtstar_param_.margin,
-      original_vehicle_shape.width + 2 * rrtstar_param_.margin,
-      original_vehicle_shape.base2back + rrtstar_param_.margin}),
+      original_vehicle_shape.length + 2 * rrtstar_param.margin,
+      original_vehicle_shape.width + 2 * rrtstar_param.margin,
+      original_vehicle_shape.base2back + rrtstar_param.margin}),
   rrtstar_param_(rrtstar_param),
   original_vehicle_shape_(original_vehicle_shape)
 {
@@ -44,21 +54,11 @@ bool GridInformedRRTStar::makePlan(
   start_pose_ = global2local(costmap_, start_pose);
   goal_pose_ = global2local(costmap_, goal_pose);
 
-  const auto pose2index = [&](const rrtstar::Pose & pose) {
+  const auto is_obstacle_free = [&](const rrtstar::Pose & pose) {
     const size_t index_x = pose.x / costmap_.info.resolution;
     const size_t index_y = pose.y / costmap_.info.resolution;
     const size_t index_theta = discretizeAngle(pose.yaw, planner_common_param_.theta_size);
-    return IndexXYT{index_x, index_y, index_theta};
-  };
-
-  const auto is_obstacle_free = [&](const rrtstar::Pose & pose) {
-    auto && index = pose2index(pose);
-    return !detectCollision(index);
-  };
-
-  const auto rospose2rrtpose = [](const geometry_msgs::msg::Pose & pose_msg) {
-    return rrtstar::Pose{
-      pose_msg.position.x, pose_msg.position.y, tf2::getYaw(pose_msg.orientation)};
+    return !detectCollision(IndexXYT{index_x, index_y, index_theta});
   };
 
   const rrtstar::Pose lo{0, 0, 0};
@@ -67,8 +67,17 @@ bool GridInformedRRTStar::makePlan(
     M_PI};
   const double radius = planner_common_param_.minimum_turning_radius;
   const auto cspace = rrtstar::CSpace(lo, hi, radius, is_obstacle_free);
-  const auto x_start = rospose2rrtpose(start_pose_);
-  const auto x_goal = rospose2rrtpose(goal_pose_);
+  const auto x_start = posemsgToPose(start_pose_);
+  const auto x_goal = posemsgToPose(goal_pose_);
+
+  if (!is_obstacle_free(x_start)) {
+    return false;
+  }
+
+  if (!is_obstacle_free(x_goal)) {
+    return false;
+  }
+
   const bool is_informed = true;  // always better
   const double collision_check_resolution = rrtstar_param_.margin * 2;
   auto algo = rrtstar::RRTStar(
